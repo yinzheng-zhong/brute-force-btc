@@ -22,6 +22,8 @@ else
 
 i think is quite simple.
 
+**Interesting tool to play with, but using the hash power to mine bitcoins directly is better**
+
 If you like it!! **1KyQXpa1Zke5v94QZV2U77i7oaVwPTijdY**
 
 
