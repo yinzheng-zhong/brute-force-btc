@@ -19,7 +19,7 @@ from datetime import datetime
 class Seek:
     FILENAME = 'bit.txt'
     LOG_EVERY_N = 500
-    NUM_CORES = 20  # number of cores to use
+    NUM_CORES = 16  # number of cores to use
 
     def __init__(self, ):
         self.pub_keys = self.prepare_stored_key()
@@ -29,7 +29,7 @@ class Seek:
     @staticmethod
     def prepare_stored_key():
         with open(Seek.FILENAME) as f:
-            return [p for p in f]
+            return [p.replace('\n', '') for p in f]
 
     @staticmethod
     def ripemd160(x):
@@ -46,7 +46,11 @@ class Seek:
         WIF = base58.b58encode(binascii.unhexlify(fullkey + sha256b[:8]))
 
         # get public key , uncompressed address starts with "1"
-        sk = ecdsa.SigningKey.from_string(priv_key, curve=ecdsa.SECP256k1)
+        try:
+            sk = ecdsa.SigningKey.from_string(priv_key, curve=ecdsa.SECP256k1)
+        except Exception:
+            return '', ''
+
         vk = sk.get_verifying_key()
         publ_key = '04' + binascii.hexlify(vk.to_string()).decode()
         hash160 = Seek.ripemd160(hashlib.sha256(binascii.unhexlify(publ_key)).digest()).digest()
@@ -57,6 +61,12 @@ class Seek:
         pub = publ_addr_b.decode()
 
         return priv, pub
+
+    def searching(self, pub):
+        if pub in self.pub_keys:
+            return True
+        else:
+            return False
 
     def seek(self, r):
         start_time = dt.datetime.today().timestamp()
@@ -71,37 +81,33 @@ class Seek:
             time_diff = dt.datetime.today().timestamp() - start_time
             if (i % Seek.LOG_EVERY_N) == 0:
                 print('Core :' + str(r) + " K/s = " + str(i / time_diff))
-            # print ('Worker '+str(r)+':'+ str(i) + '.-  # '+pub + ' # -------- # '+ priv+' # ')
-            pub = pub + '\n'
+                start_time = dt.datetime.today().timestamp()
+                i = 0
 
-            for line in self.pub_keys:
-                if pub in line:
-                    msg = "\nPublic: " + str(pub) + " ---- Private: " + str(priv) + "YEI"
-                    text = msg
+            if self.searching(pub):
+                msg = "\nPublic: " + str(pub) + " ---- Private: " + str(priv) + "YEI"
+                print('WINNER WINNER CHICKEN DINNER!!! ---- ' + datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                      pub, priv)
+                print(msg)
 
-                    try:
-                        server = smtplib.SMTP("smtp.gmail.com", 587)
-                        server.ehlo()
-                        server.starttls()
-                        server.login("example@gmail.com", "password")
-                        fromaddr = "example@gmail.com"
-                        toaddr = "example@gmail.com"
-                        server.sendmail(fromaddr, toaddr, text)
-                    except Exception as e:
-                        print('SMTP Error')
+                try:
+                    server = smtplib.SMTP("smtp.gmail.com", 587)
+                    server.ehlo()
+                    server.starttls()
+                    server.login("example@gmail.com", "password")
+                    fromaddr = "example@gmail.com"
+                    toaddr = "example@gmail.com"
+                    server.sendmail(fromaddr, toaddr, msg)
+                except Exception as e:
+                    print('SMTP Error')
 
-                    print(text)
-                    f = open('Wallets.txt', 'a')
-                    f.write(priv)
-                    f.write('     ')
-                    f.write(pub)
-                    f.write('\n')
-                    f.close()
-                    time.sleep(30)
-                    print('WINNER WINNER CHICKEN DINNER!!! ---- ' + datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                          pub, priv)
-
-                    break
+                f = open('Wallets.txt', 'a')
+                f.write(priv)
+                f.write('     ')
+                f.write(pub)
+                f.write('\n')
+                f.close()
+                time.sleep(30)
 
     def run(self):
         jobs = []
@@ -113,4 +119,5 @@ class Seek:
 
 if __name__ == '__main__':
     seek = Seek()
+    #seek.seek(0)
     seek.run()
